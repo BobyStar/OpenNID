@@ -18,6 +18,7 @@ namespace OpenNID
         internal static VRCNetworkBehaviour[] sceneNetworkBehaviours;
         internal static Dictionary<GameObject, List<VRCNetworkBehaviour>> sceneNetworkObjects;
         
+        // TODO: Create selector to select specific descriptor in scene(s)
         internal static VRC_SceneDescriptor GetCurrentSceneDescriptor()
         {
             if (targetSceneDescriptor)

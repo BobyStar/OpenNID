@@ -44,6 +44,15 @@ namespace OpenNID
             createdGUI = false;
             rootVisualElement.Clear();
             Undo.undoRedoPerformed -= Refresh;
+
+            if (currentWindow == this)
+                currentWindow = null;
+        }
+
+        private void OnDestroy()
+        {
+            if (currentWindow == this)
+                currentWindow = null;
         }
 
         private void OnFocus()
