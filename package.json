@@ -15,6 +15,6 @@
   "legacyFiles": {},
   "localPath": "C:\\Users\\bobys\\Documents\\VRChat Stuff\\SDK3\\Worlds\\GuessOut\\Packages\\bobystarvrc.opennid",
   "dependencies": {
-    "com.vrchat.worlds": "3.8.0"
+    "com.vrchat.worlds": "3.7.4"
   }
 }

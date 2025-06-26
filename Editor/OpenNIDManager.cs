@@ -23,7 +23,7 @@ namespace OpenNID
             if (targetSceneDescriptor)
                 return targetSceneDescriptor;
 
-            if (VRC_SceneDescriptor.Exists)
+            if (VRC_SceneDescriptor.Instance)
             {
                 targetSceneDescriptor = VRC_SceneDescriptor.Instance;
                 return VRC_SceneDescriptor.Instance;
