@@ -1,6 +1,6 @@
 {
   "name": "bobystarvrc.opennid",
-  "displayName": "bobystarvrc.opennid",
+  "displayName": "Open NID",
   "version": "1.0.0",
   "description": "An open souce utlity tool to easily manage Network IDs for VRChat worlds.",
   "gitDependencies": {},
