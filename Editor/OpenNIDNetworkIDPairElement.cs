@@ -167,12 +167,12 @@ namespace OpenNID
             // TODO: Create lookup table for colors and support for light theme "Unity Pro Theme"
             Color backgroundColor = new Color(.2f, .2f, .2f);
             Color borderColor = new Color(.128f, .128f, .128f);
-            if (HasIssue)
+            if (HasIssue && !importMode)
             {
                 backgroundColor = new Color(.15f, 0, 0);
                 borderColor = Color.red;
             }
-            else if (HasStatus(Status.PersistenceEnabled))
+            else if (HasStatus(Status.PersistenceEnabled) && !importMode)
             {
                 backgroundColor = new Color(0.15f, 0.2f, 0.25f);
                 borderColor = new Color(0.1f, 0.5f, 0.5f);
