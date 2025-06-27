@@ -32,13 +32,13 @@ namespace OpenNID
             // TODO: Provide "Auto Fix" option. "Auto Fix" may require user input in the future (scene vs prefab modification for differentiating transform paths).
             int choice = EditorUtility.DisplayDialogComplex("Open NID - Network ID Conflict",
                 "There are Network ID issues in the current scene. The build will be canceled if conflicts are not resolved.\n",
-                "Open NID tool", "Cancel Build", "Auto Resolve");
+                "Auto Resolve", "Cancel Build", "Open NID tool");
             
-            if (choice == 0)
+            if (choice == 2)
             {
                 OpenNIDWindow.OpenToolWindow();
             }
-            if (choice < 2 || !OpenNIDManager.TryAutoResolveConflicts(true))
+            if (choice > 0 || !OpenNIDManager.TryAutoResolveConflicts(true))
             {
                 // TODO: Use Proper Cancel API (if one exists?) or find nicer exception method than a plain SystemException.
                 throw new SystemException("Network IDs Require Resolving");
