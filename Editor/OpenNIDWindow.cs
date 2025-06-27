@@ -21,6 +21,7 @@ namespace OpenNID
         private List<OpenNIDNetworkIDPairElement> networkIDPairElements = new List<OpenNIDNetworkIDPairElement>();
         private ScrollView networkIDCollectionScrollView;
         private Dictionary<OpenNIDNetworkIDPairElement.Status, Foldout> sortedStatusFoldouts;
+        private VisualElement networkIDCountContainer;
         private Button autoResolveButton;
         
         public enum SortMethod { Status, NetworkID, File, }
@@ -32,6 +33,7 @@ namespace OpenNID
             currentWindow ??= GetWindow<OpenNIDWindow>();
             currentWindow.titleContent = new GUIContent("Open NID Tool");
             currentWindow.minSize = new Vector2(284, 128);
+            currentWindow.Focus();
         }
         
         private void OnEnable()
@@ -285,6 +287,7 @@ namespace OpenNID
                 return;
             }
 
+            GUIDrawNetworkIDCount(rootVisualElement, OpenNIDManager.targetSceneDescriptor.NetworkIDCollection.Count);
             autoResolveButton.style.display = OpenNIDManager.CheckForNetworkIDIssues(false) ? DisplayStyle.Flex : DisplayStyle.None;
 
             if (sortMode != SortMethod.Status || sortedStatusFoldouts == null)
@@ -313,8 +316,13 @@ namespace OpenNID
         
         private void GUIDrawNetworkIDCount(VisualElement root, int count)
         {
-            Label l = new Label($"{count} Network ID{(count == 1 ? "" : "s")}");
-            root.Add(l);
+            if (networkIDCountContainer == null)
+            {
+                networkIDCountContainer = new Label();
+                root.Add(networkIDCountContainer);
+            }
+
+            (networkIDCountContainer as Label).text = $"{count} Network ID{(count == 1 ? "" : "s")}";
         }
 
         private void SortNetworkObjectElements(SortMethod sortMethod)
