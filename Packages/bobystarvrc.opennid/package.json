@@ -6,7 +6,7 @@
   "description": "An open souce utlity tool to easily manage Network IDs for VRChat worlds.",
   "gitDependencies": {},
   "vpmDependencies": {
-    "com.vrchat.worlds": "3.7.4"
+    "com.vrchat.worlds": ">=3.7.4"
   },
   "author": {
     "name": "BobyStar",
