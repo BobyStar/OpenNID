@@ -16,5 +16,7 @@ Open NID provides an intuitive export and import tool for transferring Network I
 Open NID checks for network behaviours related to VRC Player Objects w/VRC Enable Persistence components to allow operations like Clear and Regenerate Network IDs to exclude persistence enabled Network IDs.<br>
 ![A screenshot showing a dialogue for clearing the current scene Network IDs with the option to exclude persistent objects.](Promo/Images/OpenNID_Screenshot_ClearPersistentNetworkIDs.png)
 ![A screenshot showing a dialogue for regenerating the current scene Network IDs with the option to exclude persistent objects.](Promo/Images/OpenNID_Screenshot_RegeneratePersistentNetworkIDs.png)
+## Undo/Redo Support
+Most actions done with Open NID support Unity's Undo system and Prefab instance modifications.
 # Support
 Want to support the tool? Share it with others and make a contribution to the codebase!
