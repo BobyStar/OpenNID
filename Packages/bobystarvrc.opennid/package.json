@@ -2,6 +2,7 @@
   "name": "bobystarvrc.opennid",
   "displayName": "Open NID",
   "version": "1.0.0",
+  "unity" : "2022.3",
   "description": "An open souce utlity tool to easily manage Network IDs for VRChat worlds.",
   "gitDependencies": {},
   "vpmDependencies": {
