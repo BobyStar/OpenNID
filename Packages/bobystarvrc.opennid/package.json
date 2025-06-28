@@ -5,16 +5,10 @@
   "description": "An open souce utlity tool to easily manage Network IDs for VRChat worlds.",
   "gitDependencies": {},
   "vpmDependencies": {
-    "com.vrchat.worlds": "3.8.2"
+    "com.vrchat.worlds": "3.7.4"
   },
   "author": {
     "name": "BobyStar",
-    "email": "bobystarosiris@gmai.com"
-  },
-  "legacyFolders": {},
-  "legacyFiles": {},
-  "localPath": "C:\\Users\\bobys\\Documents\\VRChat Stuff\\SDK3\\Worlds\\GuessOut\\Packages\\bobystarvrc.opennid",
-  "dependencies": {
-    "com.vrchat.worlds": "3.7.4"
+    "email": "bobystarosiris@gmail.com"
   }
 }
