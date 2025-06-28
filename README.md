@@ -1,8 +1,8 @@
+# Install
+Install the VPM package <b>[here](https://bobystar.github.io/OpenNID/)</b> or via the Unity Package in [Releases](https://github.com/BobyStar/OpenNID/releases/latest).
 # Open NID
 An open source utility tool to easily manage Network IDs for VRChat worlds.<br>
 ![A screenshot showing the main Open NID window.](Promo/Images/OpenNID_Screenshot_MainWindow.png)
-# Install
-Install the VPM package <b>[here](https://bobystar.github.io/OpenNID/)</b> or via the Unity Package in [Releases](https://github.com/BobyStar/OpenNID/releases/latest).
 # Features
 ## Automatic Conflict Resolution
 Open NID provides simple auto fixes for tedious actions like reapplying scene components to an existing network object and 
