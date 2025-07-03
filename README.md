@@ -22,4 +22,5 @@ Open NID checks for network behaviours related to VRC Player Objects w/VRC Enabl
 ## Undo/Redo Support
 Most actions done with Open NID support Unity's Undo system and Prefab instance modifications.
 # Support
+Found a bug? Report it [here](https://github.com/BobyStar/OpenNID/issues)!<br>
 Want to support the tool? Share it with others and make a contribution to the codebase!
