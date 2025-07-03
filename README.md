@@ -1,5 +1,6 @@
 # Install
-Install the VPM package <b>[here](https://bobystar.github.io/OpenNID/)</b> or via the Unity Package in [Releases](https://github.com/BobyStar/OpenNID/releases/latest).
+Install the VPM package <b>[here](https://bobystar.github.io/OpenNID/)</b> or via the Unity Package in [Releases](https://github.com/BobyStar/OpenNID/releases/latest).<br>
+Open the main window in the Unity Editor Menu: `Tools/Open NID`.
 # Open NID
 An open source utility tool to easily manage Network IDs for VRChat worlds.<br>
 ![A screenshot showing the main Open NID window.](Promo/Images/OpenNID_Screenshot_MainWindow.png)
