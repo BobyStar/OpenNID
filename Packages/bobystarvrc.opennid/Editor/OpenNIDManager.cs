@@ -17,7 +17,10 @@ namespace OpenNID
         internal static VRC_SceneDescriptor targetSceneDescriptor;
         internal static VRCNetworkBehaviour[] sceneNetworkBehaviours;
         internal static Dictionary<GameObject, List<VRCNetworkBehaviour>> sceneNetworkObjects;
-        
+
+        internal const int MIN_NETWORK_ID = 10;
+        internal const int MAX_NETWORK_ID = 1000000;
+
         // TODO: Create selector to select specific descriptor in scene(s)
         internal static VRC_SceneDescriptor GetCurrentSceneDescriptor()
         {
@@ -95,6 +98,19 @@ namespace OpenNID
             List<NetworkIDPair> missingSerializedTypePairs = OpenNIDManager.GetNetworkIDPairsWithMissingSerializedTypeNames();
             List<NetworkIDPair> mismatchedComponents = OpenNIDManager.GetNetworkIDPairsWithMismatchedComponents();
             Dictionary<string, List<NetworkIDPair>> sharedNetworkObjectHierarchyPaths = OpenNIDManager.GetGroupsOfNetworkIDPairsWithSharedHierarchyPaths();
+            List<NetworkIDPair> pinnedNetworkIdIssues = OpenNIDManager.GetNetworkIDPairsWithPinnedNetworkIdIssues();
+
+            // These should not be auto-resolved, as the user should decide the soltion for each
+            if (pinnedNetworkIdIssues is {Count: > 0})
+            {
+                string message = $"The following Network ID pairs have pinned Network ID issues:\n";
+                foreach (NetworkIDPair pair in pinnedNetworkIdIssues)
+                {
+                    message += $"- {pair.ID} ({pair.gameObject.name})\n";
+                }
+                OpenNIDUtility.LogError(message);
+                return false;
+            }
 
             string detailsMessage = "";
             if (missingNetworkIDPairs is { Count: > 0 })
@@ -259,19 +275,58 @@ namespace OpenNID
                 return;
 
             Dictionary<GameObject, List<VRCNetworkBehaviour>> networkObjects = new Dictionary<GameObject, List<VRCNetworkBehaviour>>();
+            Dictionary<GameObject, List<VRCNetworkBehaviour>> networkObjectsWithPin = new Dictionary<GameObject, List<VRCNetworkBehaviour>>();
             foreach (VRCNetworkBehaviour networkBehaviour in networkBehaviours)
             {
-                if (!networkObjects.TryAdd(networkBehaviour.gameObject, new List<VRCNetworkBehaviour>() { networkBehaviour }))
-                    networkObjects[networkBehaviour.gameObject].Add(networkBehaviour);
+                if (!networkBehaviour || !networkBehaviour.gameObject)
+                    continue;
+                
+                PinNetworkId pinNetworkId = networkBehaviour.gameObject.GetComponent<PinNetworkId>();
+                if (pinNetworkId)
+                {
+                    if (!networkObjectsWithPin.TryAdd(networkBehaviour.gameObject, new List<VRCNetworkBehaviour>() { networkBehaviour }))
+                        networkObjectsWithPin[networkBehaviour.gameObject].Add(networkBehaviour);
+                }
+                else
+                {
+                    if (!networkObjects.TryAdd(networkBehaviour.gameObject, new List<VRCNetworkBehaviour>() { networkBehaviour }))
+                        networkObjects[networkBehaviour.gameObject].Add(networkBehaviour);
+                }
             }
-            
+
             // Get list of network IDs in use
             Undo.RecordObject(targetSceneDescriptor, "Regenerated Network IDs");
             targetSceneDescriptor.NetworkIDCollection ??= new List<NetworkIDPair>();
             List<int> inUseNetworkIDs = (from pair in targetSceneDescriptor.NetworkIDCollection where pair != null select pair.ID).ToList();
             List<GameObject> inFileNetworkObjects = (from pair in targetSceneDescriptor.NetworkIDCollection where pair != null && pair.gameObject select pair.gameObject).ToList();
 
-            int networkID = 10;
+            // process the pinned network objects first
+            foreach (GameObject networkObjWithPin in networkObjectsWithPin.Keys)
+            {
+                if (inFileNetworkObjects.Contains(networkObjWithPin))
+                    continue;
+
+                PinNetworkId pinNetworkId = networkObjWithPin.GetComponent<PinNetworkId>();
+                if (!pinNetworkId)
+                {
+                    continue;
+                }
+
+                int pinnedNetworkId = pinNetworkId.PinnedNetworkId;
+                if (inUseNetworkIDs.Contains(pinnedNetworkId))
+                {
+                    OpenNIDUtility.LogError("Cannot assign Network ID to object because the pinned Network ID is already in use!");
+                    refreshWindow?.Refresh();
+                    return;
+                }
+
+                inUseNetworkIDs.Add(pinnedNetworkId);
+                inFileNetworkObjects.Add(networkObjWithPin);
+                targetSceneDescriptor.NetworkIDCollection.Add(new NetworkIDPair() { gameObject = networkObjWithPin, ID = pinnedNetworkId, });
+                AssignSceneComponentsToFileComponentsOnObject(networkObjWithPin); // Marks Dirty Here
+            }
+
+            int networkID = MIN_NETWORK_ID;
             foreach (GameObject networkObject in networkObjects.Keys)
             {
                 if (inFileNetworkObjects.Contains(networkObject))
@@ -281,7 +336,7 @@ namespace OpenNID
                 while (inUseNetworkIDs.Contains(networkID))
                 {
                     networkID++;
-                    if (networkID < 1000000)
+                    if (networkID < MAX_NETWORK_ID)
                         continue;
                     
                     OpenNIDUtility.LogError("Ran out of Network IDs to assign!");
@@ -593,12 +648,36 @@ namespace OpenNID
             return missingComponents || objectNetworkBehaviours.Count > 0;
         }
 
+        internal static bool HasPinnedNetworkIdMismatch(NetworkIDPair networkIDPair)
+        {
+            if (networkIDPair == null || !networkIDPair.gameObject)
+                return false;
+
+            PinNetworkId pinNetworkId = networkIDPair.gameObject.GetComponent<PinNetworkId>();
+            if (!pinNetworkId || !pinNetworkId.IsLocked)
+                return false;
+
+            int pinnedNetworkId = pinNetworkId.PinnedNetworkId;
+            if (!OpenNIDUtility.IsValidNetworkID(pinnedNetworkId))
+                return true;
+
+            return networkIDPair.ID != pinnedNetworkId;
+        }
+
         internal static List<NetworkIDPair> GetNetworkIDPairsWithMismatchedComponents()
         {
             if (!GetCurrentSceneDescriptor())
                 return null;
 
             return targetSceneDescriptor.NetworkIDCollection.Where(HasComponentMismatchWithFile).ToList();
+        }
+
+        internal static List<NetworkIDPair> GetNetworkIDPairsWithPinnedNetworkIdIssues()
+        {
+            if (!GetCurrentSceneDescriptor())
+                return null;
+
+            return targetSceneDescriptor.NetworkIDCollection.Where(HasPinnedNetworkIdMismatch).ToList();
         }
 
         internal static Dictionary<string, List<NetworkIDPair>> GetGroupsOfNetworkIDPairsWithSharedHierarchyPaths()
@@ -640,7 +719,7 @@ namespace OpenNID
             if (logs && CheckForNetworkObjectDuplicateHierarchyPaths())
                 OpenNIDUtility.LogWarning("Multiple network objects share the same transform hierarchy path. Check the Open NID tool for more details.");
                 
-            if (CheckForMissingNetworkIDPairs() || CheckForMissingNetworkObjects() || CheckForNetworkObjectComponentMismatches())
+            if (CheckForMissingNetworkIDPairs() || CheckForMissingNetworkObjects() || CheckForNetworkObjectComponentMismatches() || CheckForPinnedNetworkIdIssues())
                 return true;
             
             return false;
@@ -673,6 +752,46 @@ namespace OpenNID
         private static bool CheckForNetworkObjectComponentMismatches()
         {
             return targetSceneDescriptor.NetworkIDCollection.Any(HasComponentMismatchWithFile);
+        }
+
+        private static bool CheckForPinnedNetworkIdIssues()
+        {
+            List<NetworkIDPair> networkIDPairs = targetSceneDescriptor.NetworkIDCollection;
+
+            List<PinNetworkId> pinNetworkIds = Object.FindObjectsOfType<PinNetworkId>(true).ToList();
+            foreach (PinNetworkId pinNetworkId in pinNetworkIds)
+            {
+                if (!pinNetworkId || !pinNetworkId.gameObject)
+                {
+                    continue;
+                }
+
+                // todo: figure out what should really happen if we discover an unlocked PinNetworkId.
+                if (!pinNetworkId.IsLocked)
+                {
+                    continue;
+                }
+
+                int pinnedNetworkId = pinNetworkId.PinnedNetworkId;
+
+                if (!OpenNIDUtility.IsValidNetworkID(pinnedNetworkId))
+                {
+                    return true;
+                }
+
+                NetworkIDPair pair = OpenNIDUtility.GetNetworkIDPairFromGameObject(networkIDPairs, pinNetworkId.gameObject);
+                if (pair == null)
+                {
+                    return true;
+                }
+
+                if (pair.ID != pinnedNetworkId)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
         #endregion
     }
