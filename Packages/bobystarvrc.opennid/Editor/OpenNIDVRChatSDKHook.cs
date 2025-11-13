@@ -8,7 +8,7 @@ namespace OpenNID
 {
     public static class OpenNIDVRChatSDKHook
     {
-        private static IVRCSdkWorldBuilderApi builder;
+        private static IVRCSdkBuilderApi builder;
 
         [InitializeOnLoadMethod]
         public static void RegisterSDKCallback()
