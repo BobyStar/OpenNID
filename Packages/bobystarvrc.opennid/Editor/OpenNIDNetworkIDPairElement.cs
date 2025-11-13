@@ -12,9 +12,19 @@ namespace OpenNID
     public class OpenNIDNetworkIDPairElement : Box
     {
         [Flags]
-        public enum Status { Normal, NetworkIDPairMissing, NetworkObjectMissing, SerializedTypeNamesMissing = 4, ComponentMismatch = 8, PersistenceEnabled = 16, }
+        public enum Status
+        {
+            Normal = 0,
+            NetworkIDPairMissing = 1 << 0,
+            NetworkObjectMissing = 1 << 1,
+            SerializedTypeNamesMissing = 1 << 2,
+            ComponentMismatch = 1 << 3,
+            PersistenceEnabled = 1 << 4,
+            PinnedIdMismatch = 1 << 5,
+        }
+
         public Status statusFlags { get; private set; }
-        public bool HasIssue => HasStatus(Status.NetworkIDPairMissing) || HasStatus(Status.NetworkObjectMissing) || HasStatus(Status.SerializedTypeNamesMissing) || HasStatus(Status.ComponentMismatch);
+        public bool HasIssue => HasStatus(Status.NetworkIDPairMissing) || HasStatus(Status.NetworkObjectMissing) || HasStatus(Status.SerializedTypeNamesMissing) || HasStatus(Status.ComponentMismatch) || HasStatus(Status.PinnedIdMismatch);
 
         internal NetworkIDPair networkIDPair;
 
@@ -64,6 +74,8 @@ namespace OpenNID
                 return Status.NetworkIDPairMissing;
             if (HasStatus(Status.NetworkObjectMissing))
                 return Status.NetworkObjectMissing;
+            if (HasStatus(Status.PinnedIdMismatch))
+                return Status.PinnedIdMismatch;
             if (HasStatus(Status.SerializedTypeNamesMissing))
                 return Status.SerializedTypeNamesMissing;
             if (HasStatus(Status.ComponentMismatch))
@@ -143,6 +155,8 @@ namespace OpenNID
                     statusFlags |= Status.SerializedTypeNamesMissing;
                 if (OpenNIDManager.HasComponentMismatchWithFile(networkIDPair))
                     statusFlags |= Status.ComponentMismatch;
+                if (OpenNIDManager.HasPinnedNetworkIdMismatch(networkIDPair))
+                    statusFlags |= Status.PinnedIdMismatch;
 
                 // Non-Error
                 if (OpenNIDManager.IsNetworkIDPairPersistenceEnabled(networkIDPair))
