@@ -270,7 +270,7 @@ namespace OpenNID
                         if (sortMode == SortMethod.Status && sortedStatusFoldouts.ContainsKey(networkIDPairElements[i].GetPrimaryStatus()))
                             sortedStatusFoldouts[networkIDPairElements[i].GetPrimaryStatus()].Add(networkIDPairElements[i]);
                         else
-                            rootVisualElement.Add(networkIDPairElements[i]);
+                            networkIDCollectionScrollView.Add(networkIDPairElements[i]);
                         
                         networkIDPairElements[i].BringToFront();
                         continue;
