@@ -35,33 +35,35 @@ namespace OpenNID
             Label infoLabel = new Label($"Network ID: {formatNetworkId(networkId)}");
             container.Add(infoLabel);
 
-            if (showAssignButton)
+            if (!showAssignButton)
             {
-                Button assignButton = new Button(() =>
-                {
-                    if (!showAssignButton)
-                    {
-                        Debug.LogWarning("Network ID already assigned to this GameObject.");
-                        return;
-                    }
-
-                    if (networkBehaviours.Count == 0)
-                    {
-                        Debug.LogWarning("No VRCNetworkBehaviour found on this GameObject.");
-                        return;
-                    }
-
-                    OpenNIDManager.AssignSceneNetworkObjectsNewNetworkIDs(networkBehaviours,
-                        OpenNIDWindow.currentWindow);
-                    EditorUtility.SetDirty(sceneDescriptor);
-                    AssetDatabase.SaveAssets();
-                    BuildUI();
-                })
-                {
-                    text = "Assign Network ID"
-                };
-                container.Add(assignButton);
+                return;
             }
+
+            Button assignButton = new Button(() =>
+            {
+                if (!showAssignButton)
+                {
+                    Debug.LogWarning("Network ID already assigned to this GameObject.");
+                    return;
+                }
+
+                if (networkBehaviours.Count == 0)
+                {
+                    Debug.LogWarning("No VRCNetworkBehaviour found on this GameObject.");
+                    return;
+                }
+
+                OpenNIDManager.AssignSceneNetworkObjectsNewNetworkIDs(networkBehaviours, OpenNIDWindow.currentWindow);
+                OpenNIDManager.AssignSceneComponentsToFileComponentsOnObject(networkIdInfo.gameObject);
+                EditorUtility.SetDirty(sceneDescriptor);
+                AssetDatabase.SaveAssets();
+                BuildUI();
+            })
+            {
+                text = "Assign Network ID"
+            };
+            container.Add(assignButton);
         }
 
         private string formatNetworkId(int networkId)

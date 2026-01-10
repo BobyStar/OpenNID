@@ -268,7 +268,45 @@ namespace OpenNID
             
             OpenNIDWindow.currentWindow?.Refresh();
         }
-        
+
+        internal static GameObject GetGameObjectFromNetworkID(int networkID)
+        {
+            if (!GetCurrentSceneDescriptor())
+                return null;
+
+            foreach (NetworkIDPair pair in targetSceneDescriptor.NetworkIDCollection)
+            {
+                if (pair == null)
+                    continue;
+                if (pair.ID == networkID)
+                    return pair.gameObject;
+            }
+
+            return null;
+        }
+
+        internal static int GetNextAvailableNetworkID()
+        {
+            if (!GetCurrentSceneDescriptor())
+                return -1;
+
+            targetSceneDescriptor.NetworkIDCollection ??= new List<NetworkIDPair>();
+
+            HashSet<int> inUseNetworkIDs = new HashSet<int>(
+                from pair in targetSceneDescriptor.NetworkIDCollection
+                where pair != null
+                select pair.ID
+            );
+
+            for (int i = MIN_NETWORK_ID; i < MAX_NETWORK_ID; i++)
+            {
+                if (!inUseNetworkIDs.Contains(i))
+                    return i;
+            }
+
+            return -1;
+        }
+
         internal static void AssignSceneNetworkObjectsNewNetworkIDs(List<VRCNetworkBehaviour> networkBehaviours, OpenNIDWindow refreshWindow = null)
         {
             if (!GetCurrentSceneDescriptor())
@@ -429,6 +467,9 @@ namespace OpenNID
                 return;
 
             NetworkIDPair pair = OpenNIDUtility.GetNetworkIDPairFromGameObject(targetSceneDescriptor.NetworkIDCollection, networkObject);
+
+            if (pair == null)
+                return;
 
             Undo.RecordObject(targetSceneDescriptor, "Assigned Scene VRCNetworkBehaviour Components to File");
             pair.SerializedTypeNames ??= new List<string>();
