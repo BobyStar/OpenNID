@@ -4,12 +4,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using UnityEditor;
-using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
 using VRC.SDKBase;
 using VRC.SDKBase.Network;
-using Debug = UnityEngine.Debug;
 
 namespace OpenNID
 {
@@ -34,6 +32,31 @@ namespace OpenNID
             currentWindow.titleContent = new GUIContent("Open NID Tool");
             currentWindow.minSize = new Vector2(284, 128);
             currentWindow.Focus();
+        }
+
+        [MenuItem("GameObject/Show Network IDs", false)]
+        public static void PresentSelectedNetworkObjects()
+        {
+            ExpandAndShowNetworkObjects(Selection.gameObjects.ToList());
+        }
+        
+        [MenuItem("GameObject/Show Network IDs", true)]
+        public static bool PresentSelectedNetworkObjectsValidation()
+        {
+            return Selection.GetFiltered<VRCNetworkBehaviour>(SelectionMode.Editable).Length > 0;
+        }
+
+        public static void ExpandAndShowNetworkObjects(List<GameObject> networkObjects)
+        {
+            OpenToolWindow();
+
+            if (!currentWindow)
+            {
+                OpenNIDUtility.LogError("Failed to find Open NID Window!");
+                return;
+            }
+            
+            currentWindow.PresentNetworkPairElementsFromObjects(networkObjects);
         }
         
         private void OnEnable()
@@ -237,6 +260,32 @@ namespace OpenNID
 
             sortMode = newSortMode;
             Refresh();
+        }
+
+        internal void PresentNetworkPairElementsFromObjects(List<GameObject> presentingNetworkObjects)
+        {
+            if (networkIDPairElements == null || networkIDPairElements.Count == 0)
+                Refresh();
+            
+            List<OpenNIDNetworkIDPairElement> presentingElements = new List<OpenNIDNetworkIDPairElement>();
+            foreach (OpenNIDNetworkIDPairElement pairElement in networkIDPairElements.Where(pairElement => pairElement.networkIDPair != null))
+                presentingElements.AddRange(from networkObject in presentingNetworkObjects where networkObject == pairElement.networkIDPair.gameObject select pairElement);
+
+            foreach (OpenNIDNetworkIDPairElement presentingElement in presentingElements)
+            {
+                presentingElement.isExpanded = true;
+                if (sortMode == SortMethod.Status)
+                {
+                    if (sortedStatusFoldouts.ContainsKey(presentingElement.GetPrimaryStatus()))
+                        sortedStatusFoldouts[presentingElement.GetPrimaryStatus()].value = true;
+                }
+            }
+
+            if (presentingElements.Count == 0)
+                return;
+            
+            networkIDCollectionScrollView.MarkDirtyRepaint();
+            networkIDCollectionScrollView.schedule.Execute(() => networkIDCollectionScrollView.ScrollTo(presentingElements[0]));
         }
         
         internal void Refresh()
