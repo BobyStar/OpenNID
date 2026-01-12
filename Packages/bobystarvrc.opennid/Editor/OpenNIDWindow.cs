@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using UnityEditor;
+using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
 using VRC.SDKBase;
@@ -141,18 +142,22 @@ namespace OpenNID
             // View Options
             Button refreshButton = new Button(Refresh) { text = "Refresh" };
             root.Add(refreshButton);
+            
             DropdownField sortDropdown = new DropdownField("Sort By:", Enum.GetNames(typeof(SortMethod)).ToList(), (int)sortMode);
             Label sortDropdownLabel = sortDropdown.Q<Label>();
             if (sortDropdownLabel != null)
                 sortDropdownLabel.style.minWidth = 60;
             sortDropdown.RegisterValueChangedCallback(OnSortModeOptionChanged);
             root.Add(sortDropdown);
-
+            
+            ToolbarSearchField searchField = new ToolbarSearchField() { name = "Search", style = { width = StyleKeyword.Auto, maxHeight = 22 }};
+            searchField.RegisterValueChangedCallback(OnSearchTermChanged);
+            root.Add(searchField);
+            
             // Auto Resolve Conflicts
             autoResolveButton = new Button(() => OpenNIDManager.TryAutoResolveConflicts()) { text = "Auto Resolve Conflicts" };
             root.Add(autoResolveButton);
         }
-
         public bool TryImportNetworkIDs()
         {
             string path = EditorUtility.OpenFilePanelWithFilters("Open NID - Import Network IDs", Application.dataPath, new string[] { "txt", "json" });
@@ -260,6 +265,11 @@ namespace OpenNID
 
             sortMode = newSortMode;
             Refresh();
+        }
+        
+        private void OnSearchTermChanged(ChangeEvent<string> evt)
+        {
+            // TODO: Implement Filter Function
         }
 
         internal void PresentNetworkPairElementsFromObjects(List<GameObject> presentingNetworkObjects)
