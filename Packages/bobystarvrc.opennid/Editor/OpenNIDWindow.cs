@@ -180,6 +180,7 @@ namespace OpenNID
             autoResolveButton = new Button(() => OpenNIDManager.TryAutoResolveConflicts()) { text = "Auto Resolve Conflicts" };
             root.Add(autoResolveButton);
         }
+        
         public bool TryImportNetworkIDs()
         {
             string path = EditorUtility.OpenFilePanelWithFilters("Open NID - Import Network IDs", Application.dataPath, new string[] { "txt", "json" });
@@ -336,13 +337,24 @@ namespace OpenNID
             {
                 SortNetworkObjectElements(sortMode);
                 List<NetworkIDPair> networkIDCollection = OpenNIDManager.targetSceneDescriptor.NetworkIDCollection;
+
+                // Remove Null/Missing Pairs
+                for (int i = 0; i < networkIDPairElements.Count; i++)
+                {
+                    if (networkIDPairElements[i].networkIDPair != null && networkIDCollection.Contains(networkIDPairElements[i].networkIDPair))
+                        continue;
+                    
+                    networkIDPairElements[i].RemoveFromHierarchy();
+                    networkIDPairElements.RemoveAt(i);
+                    i--;
+                }
                 
                 if (networkIDCollection.Count > networkIDPairElements.Count)
                 {
                     List<NetworkIDPair> remainingNetworkIDPairs = networkIDCollection.GetRange(networkIDPairElements.Count, networkIDCollection.Count - networkIDPairElements.Count);
                     GUIDrawNetworkObjectElements(networkIDCollectionScrollView, remainingNetworkIDPairs);
                 }
-                
+
                 for (int i = 0; i < networkIDPairElements.Count; i++)
                 {
                     if (IsPairElementRemovedByFilter(networkIDPairElements[i], filterTerm))
@@ -356,8 +368,6 @@ namespace OpenNID
                     if (i < networkIDCollection.Count)
                     {
                         networkIDPairElements[i].style.display = DisplayStyle.Flex;
-                        if (networkIDPairElements[i].networkIDPair == null || !networkIDCollection.Contains(networkIDPairElements[i].networkIDPair))
-                            networkIDPairElements[i].networkIDPair = networkIDCollection[i];
                         networkIDPairElements[i].Refresh();
 
                         if (sortMode == SortMethod.Status && sortedStatusFoldouts.ContainsKey(networkIDPairElements[i].GetPrimaryStatus()))
