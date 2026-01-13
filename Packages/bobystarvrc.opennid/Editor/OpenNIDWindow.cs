@@ -532,7 +532,7 @@ namespace OpenNID
             if (networkIDPairElement.networkIDPair.ID.ToString().Contains(filter))
                 return false;
 
-            if (networkIDPairElement.networkIDPair.gameObject && networkIDPairElement.networkIDPair.gameObject.name.Contains(filter))
+            if (networkIDPairElement.networkIDPair.gameObject && networkIDPairElement.networkIDPair.gameObject.name.Contains(filter, StringComparison.InvariantCultureIgnoreCase))
                 return false;
             
             return true;
