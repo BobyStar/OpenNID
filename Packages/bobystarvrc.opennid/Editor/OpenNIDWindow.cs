@@ -22,9 +22,13 @@ namespace OpenNID
         private Dictionary<OpenNIDNetworkIDPairElement.Status, Foldout> sortedStatusFoldouts;
         private VisualElement networkIDCountContainer;
         private Button autoResolveButton;
+        private ToolbarSearchField searchField;
+        private string filterTerm;
         
         public enum SortMethod { Status, NetworkID, File, }
         internal SortMethod sortMode; // TODO: Hook into EditorPrefs Manager
+
+        private const float LONG_REFRESH_THRESHOLD = 0.25f;
         
         [MenuItem("Tools/Open NID")]
         public static void OpenToolWindow()
@@ -35,16 +39,28 @@ namespace OpenNID
             currentWindow.Focus();
         }
 
+        [MenuItem("GameObject/Show Network ID", false)]
+        public static void PresentSelectedNetworkObject()
+        {
+            ExpandAndShowNetworkObjects(new List<GameObject> { Selection.activeGameObject });
+        }
+        
         [MenuItem("GameObject/Show Network IDs", false)]
         public static void PresentSelectedNetworkObjects()
         {
             ExpandAndShowNetworkObjects(Selection.gameObjects.ToList());
         }
         
+        [MenuItem("GameObject/Show Network ID", true)]
+        public static bool PresentSelectedNetworkObjectValidation()
+        {
+            return Selection.GetFiltered<VRCNetworkBehaviour>(SelectionMode.Editable).Length == 1;
+        }
+        
         [MenuItem("GameObject/Show Network IDs", true)]
         public static bool PresentSelectedNetworkObjectsValidation()
         {
-            return Selection.GetFiltered<VRCNetworkBehaviour>(SelectionMode.Editable).Length > 0;
+            return Selection.GetFiltered<VRCNetworkBehaviour>(SelectionMode.Editable).Length > 1;
         }
 
         public static void ExpandAndShowNetworkObjects(List<GameObject> networkObjects)
@@ -84,7 +100,7 @@ namespace OpenNID
         private void OnFocus()
         {
             // UX adjustment if list is long or slower hardware. Switches refresh only upon user intention if last was slow.
-            if (lastRefreshDuration < .25f)
+            if (!WasLastReloadLong())
                 Refresh();
         }
 
@@ -150,7 +166,7 @@ namespace OpenNID
             sortDropdown.RegisterValueChangedCallback(OnSortModeOptionChanged);
             root.Add(sortDropdown);
             
-            ToolbarSearchField searchField = new ToolbarSearchField() { name = "Search", style = { width = StyleKeyword.Auto, maxHeight = 22 }};
+            searchField = new ToolbarSearchField() { name = "Search", style = { width = StyleKeyword.Auto, maxHeight = 22 }};
             searchField.RegisterValueChangedCallback(OnSearchTermChanged);
             root.Add(searchField);
             
@@ -269,7 +285,9 @@ namespace OpenNID
         
         private void OnSearchTermChanged(ChangeEvent<string> evt)
         {
-            // TODO: Implement Filter Function
+            filterTerm = evt.newValue;
+            if (!WasLastReloadLong())
+                Refresh();
         }
 
         internal void PresentNetworkPairElementsFromObjects(List<GameObject> presentingNetworkObjects)
@@ -293,7 +311,9 @@ namespace OpenNID
 
             if (presentingElements.Count == 0)
                 return;
-            
+
+            if (searchField != null)
+                searchField.value = "";
             networkIDCollectionScrollView.MarkDirtyRepaint();
             networkIDCollectionScrollView.schedule.Execute(() => networkIDCollectionScrollView.ScrollTo(presentingElements[0]));
         }
@@ -319,6 +339,14 @@ namespace OpenNID
                 
                 for (int i = 0; i < networkIDPairElements.Count; i++)
                 {
+                    if (IsPairElementRemovedByFilter(networkIDPairElements[i], filterTerm))
+                    {
+                        networkIDPairElements[i].style.display = DisplayStyle.None;
+                        continue;
+                    }
+
+                    networkIDPairElements[i].style.display = DisplayStyle.Flex;
+                    
                     if (i < networkIDCollection.Count)
                     {
                         networkIDPairElements[i].style.display = DisplayStyle.Flex;
@@ -486,6 +514,28 @@ namespace OpenNID
             OpenNIDNetworkIDPairElement networkIDPairElement = new OpenNIDNetworkIDPairElement(pair);
             root.Add(networkIDPairElement);
             networkIDPairElements.Add(networkIDPairElement);
+        }
+
+        private bool WasLastReloadLong()
+        {
+            return lastRefreshDuration >= LONG_REFRESH_THRESHOLD;
+        }
+
+        private bool IsPairElementRemovedByFilter(OpenNIDNetworkIDPairElement networkIDPairElement, string filter)
+        {
+            if (string.IsNullOrEmpty(filter))
+                return false;
+
+            if (networkIDPairElement?.networkIDPair == null)
+                return true;
+
+            if (networkIDPairElement.networkIDPair.ID.ToString().Contains(filter))
+                return false;
+
+            if (networkIDPairElement.networkIDPair.gameObject && networkIDPairElement.networkIDPair.gameObject.name.Contains(filter))
+                return false;
+            
+            return true;
         }
     }    
 }
