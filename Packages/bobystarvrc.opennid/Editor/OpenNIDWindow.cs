@@ -75,6 +75,12 @@ namespace OpenNID
             
             currentWindow.PresentNetworkPairElementsFromObjects(networkObjects);
         }
+
+        public static void SetAndShowSearchFilter(string filterTerm)
+        {
+            OpenToolWindow();
+            currentWindow.searchField.value = filterTerm;
+        }
         
         private void OnEnable()
         {
