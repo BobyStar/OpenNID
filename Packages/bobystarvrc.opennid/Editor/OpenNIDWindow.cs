@@ -456,6 +456,7 @@ namespace OpenNID
                     { OpenNIDNetworkIDPairElement.Status.NetworkObjectMissing, new Foldout() { text = "<b>Missing Object!</b>", value = false } },
                     { OpenNIDNetworkIDPairElement.Status.ComponentMismatch, new Foldout() { text = "<b>Component Mismatch!</b>", value = false } },
                     { OpenNIDNetworkIDPairElement.Status.PersistenceEnabled, new Foldout() { text = "Persistence Enabled", value = false } },
+                    { OpenNIDNetworkIDPairElement.Status.PinnedIdMismatch, new Foldout() { text = "<b>Pinned Network ID Mismatch!</b>", value = false } },
                 };
                 sortedStatusFoldouts.Add(OpenNIDNetworkIDPairElement.Status.SerializedTypeNamesMissing, sortedStatusFoldouts[OpenNIDNetworkIDPairElement.Status.ComponentMismatch]);
                 
@@ -463,6 +464,7 @@ namespace OpenNID
                 networkIDCollectionScrollView.Add(sortedStatusFoldouts[OpenNIDNetworkIDPairElement.Status.NetworkObjectMissing]);
                 networkIDCollectionScrollView.Add(sortedStatusFoldouts[OpenNIDNetworkIDPairElement.Status.ComponentMismatch]);
                 networkIDCollectionScrollView.Add(sortedStatusFoldouts[OpenNIDNetworkIDPairElement.Status.PersistenceEnabled]);
+                networkIDCollectionScrollView.Add(sortedStatusFoldouts[OpenNIDNetworkIDPairElement.Status.PinnedIdMismatch]);
                 networkIDCollectionScrollView.Add(sortedStatusFoldouts[OpenNIDNetworkIDPairElement.Status.Normal]);
             }
 

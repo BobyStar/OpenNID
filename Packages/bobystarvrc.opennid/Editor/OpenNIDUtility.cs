@@ -208,5 +208,10 @@ namespace OpenNID
 
             return networkIDs.FirstOrDefault(pair => pair.gameObject == target);
         }
+
+        internal static bool IsValidNetworkID(int networkID)
+        {
+            return networkID is >= OpenNIDManager.MIN_NETWORK_ID and <= OpenNIDManager.MAX_NETWORK_ID;
+        }
     }
 }
