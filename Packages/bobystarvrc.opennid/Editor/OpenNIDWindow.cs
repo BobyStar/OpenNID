@@ -322,9 +322,11 @@ namespace OpenNID
             if (searchField != null)
                 searchField.value = "";
             networkIDCollectionScrollView.MarkDirtyRepaint();
-            networkIDCollectionScrollView.schedule.Execute(() => networkIDCollectionScrollView.ScrollTo(presentingElements[0]));
+            networkIDCollectionScrollView.schedule.Execute(() => {
+                networkIDCollectionScrollView.ScrollTo(presentingElements[0]);
+            }).StartingIn(50);
         }
-        
+
         internal void Refresh()
         {
             Stopwatch refreshWatch = Stopwatch.StartNew();
@@ -348,11 +350,15 @@ namespace OpenNID
                     networkIDPairElements.RemoveAt(i);
                     i--;
                 }
-                
+
                 if (networkIDCollection.Count > networkIDPairElements.Count)
                 {
                     List<NetworkIDPair> remainingNetworkIDPairs = networkIDCollection.GetRange(networkIDPairElements.Count, networkIDCollection.Count - networkIDPairElements.Count);
-                    GUIDrawNetworkObjectElements(networkIDCollectionScrollView, remainingNetworkIDPairs);
+                    // Manually draw to maintain ScrollView integrity
+                    foreach (NetworkIDPair pair in remainingNetworkIDPairs)
+                    {
+                        GUIDrawNetworkObjectElement(networkIDCollectionScrollView, pair);
+                    }
                 }
 
                 for (int i = 0; i < networkIDPairElements.Count; i++)

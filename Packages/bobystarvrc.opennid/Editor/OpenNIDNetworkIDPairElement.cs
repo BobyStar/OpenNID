@@ -91,20 +91,41 @@ namespace OpenNID
 
             return statusFlags;
         }
-        
+
         private void CreateGUI()
         {
             if (hasCreatedGUI || networkIDPair == null)
                 return;
             hasCreatedGUI = true;
-            
+
             RefreshBoxColor();
-            
+
             mainFoldout = new Foldout() { value = false };
             mainFoldout.RegisterValueChangedCallback((b) => onExpandValueChange?.Invoke(this, b.newValue));
             RefreshFoldoutName();
+            mainFoldout.AddManipulator(new ContextualMenuManipulator(evt =>
+            {
+                evt.menu.AppendAction("Copy Network ID", (action) =>
+                {
+                    EditorGUIUtility.systemCopyBuffer = networkIDPair.ID.ToString();
+                });
+                evt.menu.AppendAction("Edit Network ID", (action) =>
+                {
+                    EditNetworkIDWizard.Create(networkIDPair.gameObject.name, networkIDPair.ID, (newId) =>
+                    {
+                        OpenNIDManager.RemoveFileNetworkIDPair(networkIDPair);
+                        networkIDPair.ID = newId;
+                        OpenNIDManager.ImportNetworkIDsToScene(new () { networkIDPair });
+                        OpenNIDManager.AssignSceneComponentsToFileComponentsOnObject(networkIDPair.gameObject); 
+
+                        Refresh();
+                        OpenNIDWindow.currentWindow?.Refresh();
+                        OpenNIDWindow.ExpandAndShowNetworkObjects(new() { networkIDPair.gameObject });
+                    });
+                });
+            }));
             Add(mainFoldout);
-            
+
             objectField = new ObjectField() { allowSceneObjects = true };
             objectField.RegisterValueChangedCallback(evt =>
             {
@@ -115,7 +136,7 @@ namespace OpenNID
             });
             RefreshObjectField();
             mainFoldout.Add(objectField);
-            
+
             RefreshComponentInfo();
         }
 
@@ -365,6 +386,7 @@ namespace OpenNID
                             OpenNIDManager.RemoveFileNetworkIDPair(networkIDPair);
                             OpenNIDManager.AssignSceneNetworkObjectsNewNetworkIDs(currentNetworkBehaviours, OpenNIDWindow.currentWindow);
                             OpenNIDManager.AssignSceneComponentsToFileComponentsOnObject(networkIDPair.gameObject);
+                            OpenNIDWindow.ExpandAndShowNetworkObjects(new() { networkIDPair.gameObject });
                         })
                         {
                             text = $"Apply Pinned Network ID ({pinNetworkId.PinnedNetworkId})",

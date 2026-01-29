@@ -74,13 +74,35 @@ namespace OpenNID
 
             foreach (NetworkIDPair pair in GetNetworkIDPairsWithMissingObjects())
                 targetSceneDescriptor.NetworkIDCollection.Remove(pair);
-            
+
             List<NetworkIDPair> mismatchedComponentPairs = GetNetworkIDPairsWithMismatchedComponents();
             mismatchedComponentPairs?.AddRange(GetNetworkIDPairsWithMissingSerializedTypeNames());
 
             foreach (NetworkIDPair pair in mismatchedComponentPairs)
                 AssignSceneComponentsToFileComponentsOnObject(pair.gameObject);
-            
+
+            List<PinNetworkId> pinNetworkIdsWithoutPairs = GetPinNetworkObjectsMissingPairs();
+            foreach (PinNetworkId pinNetworkId in pinNetworkIdsWithoutPairs)
+            {
+                GameObject networkObject = pinNetworkId.gameObject;
+                int pinnedNetworkId = pinNetworkId.PinnedNetworkId;
+
+                if (!OpenNIDUtility.IsValidNetworkID(pinnedNetworkId))
+                {
+                    continue;
+                }
+
+                NetworkIDPair newPair = new NetworkIDPair()
+                {
+                    gameObject = networkObject,
+                    ID = pinnedNetworkId,
+                    SerializedTypeNames = new List<string>(),
+                };
+
+                targetSceneDescriptor.NetworkIDCollection.Add(newPair);
+                AssignSceneComponentsToFileComponentsOnObject(networkObject);
+            }
+
             EditorUtility.SetDirty(targetSceneDescriptor.gameObject);
             PrefabUtility.RecordPrefabInstancePropertyModifications(targetSceneDescriptor);
         }
@@ -99,6 +121,7 @@ namespace OpenNID
             List<NetworkIDPair> mismatchedComponents = OpenNIDManager.GetNetworkIDPairsWithMismatchedComponents();
             Dictionary<string, List<NetworkIDPair>> sharedNetworkObjectHierarchyPaths = OpenNIDManager.GetGroupsOfNetworkIDPairsWithSharedHierarchyPaths();
             List<NetworkIDPair> pinnedNetworkIdMismatch = OpenNIDManager.GetNetworkIDPairsWithPinnedNetworkIdMismatch();
+            List<PinNetworkId> pinNetworkIdWithoutPair = OpenNIDManager.GetPinNetworkObjectsMissingPairs();
 
             // These should not be auto-resolved, as the user should decide the solution for each
             if (pinnedNetworkIdMismatch is {Count: > 0})
@@ -124,6 +147,10 @@ namespace OpenNID
             
             if (count > 0)
                 detailsMessage += $"{(detailsMessage == "" ? "" : "\n")}Apply {count} mismatched component(s) from scene.";
+
+            int numPinsWithoutPairs = pinNetworkIdWithoutPair is { Count: > 0 } ? pinNetworkIdWithoutPair.Count : 0;
+            if (numPinsWithoutPairs > 0)
+                detailsMessage += $"{(detailsMessage == "" ? "" : "\n")}Assign {numPinsWithoutPairs} Pinned Network IDs";
 
             if (detailsMessage == "")
             {
@@ -629,7 +656,25 @@ namespace OpenNID
 
             return targetSceneDescriptor.NetworkIDCollection.Where(pair => pair.SerializedTypeNames == null).ToList();
         }
-        
+
+        internal static List<PinNetworkId> GetPinNetworkObjectsMissingPairs()
+        {
+            if (!GetCurrentSceneDescriptor())
+                return null;
+
+            List<PinNetworkId> missingNetworkIDPairs = new List<PinNetworkId>();
+            PinNetworkId[] pinNetworkIds = Object.FindObjectsOfType<PinNetworkId>(true);
+            foreach (PinNetworkId pinNetworkId in pinNetworkIds)
+            {
+                NetworkIDPair pair = OpenNIDUtility.GetNetworkIDPairFromGameObject(targetSceneDescriptor.NetworkIDCollection, pinNetworkId.gameObject);
+                if (pair != null)
+                    continue;
+                missingNetworkIDPairs.Add(pinNetworkId);
+            }
+
+            return missingNetworkIDPairs;
+        }
+
         internal static bool HasComponentMismatchWithFile(NetworkIDPair networkIDPair)
         {
             if (networkIDPair == null)
