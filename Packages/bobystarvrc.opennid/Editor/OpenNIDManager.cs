@@ -98,13 +98,13 @@ namespace OpenNID
             List<NetworkIDPair> missingSerializedTypePairs = OpenNIDManager.GetNetworkIDPairsWithMissingSerializedTypeNames();
             List<NetworkIDPair> mismatchedComponents = OpenNIDManager.GetNetworkIDPairsWithMismatchedComponents();
             Dictionary<string, List<NetworkIDPair>> sharedNetworkObjectHierarchyPaths = OpenNIDManager.GetGroupsOfNetworkIDPairsWithSharedHierarchyPaths();
-            List<NetworkIDPair> pinnedNetworkIdIssues = OpenNIDManager.GetNetworkIDPairsWithPinnedNetworkIdIssues();
+            List<NetworkIDPair> pinnedNetworkIdMismatch = OpenNIDManager.GetNetworkIDPairsWithPinnedNetworkIdMismatch();
 
-            // These should not be auto-resolved, as the user should decide the soltion for each
-            if (pinnedNetworkIdIssues is {Count: > 0})
+            // These should not be auto-resolved, as the user should decide the solution for each
+            if (pinnedNetworkIdMismatch is {Count: > 0})
             {
-                string message = $"The following Network ID pairs have pinned Network ID issues:\n";
-                foreach (NetworkIDPair pair in pinnedNetworkIdIssues)
+                string message = $"The following Network ID pairs have pinned Network ID mismatches:\n";
+                foreach (NetworkIDPair pair in pinnedNetworkIdMismatch)
                 {
                     message += $"- {pair.ID} ({pair.gameObject.name})\n";
                 }
@@ -695,10 +695,11 @@ namespace OpenNID
                 return false;
 
             PinNetworkId pinNetworkId = networkIDPair.gameObject.GetComponent<PinNetworkId>();
-            if (!pinNetworkId || !pinNetworkId.IsLocked)
+            if (!pinNetworkId)
                 return false;
 
             int pinnedNetworkId = pinNetworkId.PinnedNetworkId;
+
             if (!OpenNIDUtility.IsValidNetworkID(pinnedNetworkId))
                 return true;
 
@@ -713,7 +714,7 @@ namespace OpenNID
             return targetSceneDescriptor.NetworkIDCollection.Where(HasComponentMismatchWithFile).ToList();
         }
 
-        internal static List<NetworkIDPair> GetNetworkIDPairsWithPinnedNetworkIdIssues()
+        internal static List<NetworkIDPair> GetNetworkIDPairsWithPinnedNetworkIdMismatch()
         {
             if (!GetCurrentSceneDescriptor())
                 return null;
@@ -807,21 +808,21 @@ namespace OpenNID
                     continue;
                 }
 
-                // todo: figure out what should really happen if we discover an unlocked PinNetworkId.
-                if (!pinNetworkId.IsLocked)
+                int pinnedNetworkId = pinNetworkId.PinnedNetworkId;
+
+                NetworkIDPair pair = OpenNIDUtility.GetNetworkIDPairFromGameObject(networkIDPairs, pinNetworkId.gameObject);
+                if (pair == null) // This object does not have a network ID
                 {
+                    // If someone added this component to an object without any VRCNetworkBehaviour, we should ignore it.
+                    if (sceneNetworkObjects != null && sceneNetworkObjects.ContainsKey(pinNetworkId.gameObject))
+                    {
+                        return true;
+                    }
+
                     continue;
                 }
 
-                int pinnedNetworkId = pinNetworkId.PinnedNetworkId;
-
                 if (!OpenNIDUtility.IsValidNetworkID(pinnedNetworkId))
-                {
-                    return true;
-                }
-
-                NetworkIDPair pair = OpenNIDUtility.GetNetworkIDPairFromGameObject(networkIDPairs, pinNetworkId.gameObject);
-                if (pair == null)
                 {
                     return true;
                 }

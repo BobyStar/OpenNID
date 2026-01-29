@@ -24,7 +24,11 @@ namespace OpenNID
         }
 
         public Status statusFlags { get; private set; }
-        public bool HasIssue => HasStatus(Status.NetworkIDPairMissing) || HasStatus(Status.NetworkObjectMissing) || HasStatus(Status.SerializedTypeNamesMissing) || HasStatus(Status.ComponentMismatch) || HasStatus(Status.PinnedIdMismatch);
+        public bool HasIssue => HasStatus(Status.NetworkIDPairMissing) || 
+                                HasStatus(Status.NetworkObjectMissing) || 
+                                HasStatus(Status.SerializedTypeNamesMissing) || 
+                                HasStatus(Status.ComponentMismatch) || 
+                                HasStatus(Status.PinnedIdMismatch);
 
         internal NetworkIDPair networkIDPair;
 
@@ -144,7 +148,7 @@ namespace OpenNID
                 }
                 return;
             }
-            
+
             if (networkIDPair == null)
                 statusFlags = Status.NetworkIDPairMissing;
             else
@@ -333,7 +337,43 @@ namespace OpenNID
                     if (!HasIssue && componentNames == "No Components Found!")
                         componentInfoContainer.Add(new Button(() => OpenNIDManager.TryRemoveFileNetworkIDPair(networkIDPair)) { text = "Remove Network ID Pair" });
                 }
-                
+
+                if (HasStatus(Status.PinnedIdMismatch))
+                {
+                    if (componentInfoContainer == null)
+                    {
+                        componentInfoContainer = new VisualElement();
+                    }
+
+                    PinNetworkId pinNetworkId = networkIDPair.gameObject.GetComponent<PinNetworkId>();
+                    if (pinNetworkId != null)
+                    {
+                        Button autoFixButton = new Button(() =>
+                        {
+                            if (!EditorUtility.DisplayDialog(
+                                    "Confirm Network ID Change",
+                                    $"Are you sure you want to set the Actual Network ID to {pinNetworkId.PinnedNetworkId}?\n\n" +
+                                    "If this world has already been uploaded, this object will lose persistent data unless its Actual Network ID is the same as in the uploaded version.\n\n" +
+                                    "If you already pinned the Network ID, you should apply the Pinned Network ID.",
+                                    $"Apply Pinned Network ID ({pinNetworkId.PinnedNetworkId})",
+                                    "Cancel"
+                                ))
+                            {
+                                return;
+                            }
+
+                            OpenNIDManager.RemoveFileNetworkIDPair(networkIDPair);
+                            OpenNIDManager.AssignSceneNetworkObjectsNewNetworkIDs(currentNetworkBehaviours, OpenNIDWindow.currentWindow);
+                            OpenNIDManager.AssignSceneComponentsToFileComponentsOnObject(networkIDPair.gameObject);
+                        })
+                        {
+                            text = $"Apply Pinned Network ID ({pinNetworkId.PinnedNetworkId})",
+                            style = { marginTop = 8, }
+                        };
+                        componentInfoContainer.Add(autoFixButton);
+                    }
+                }
+
                 if (componentInfoContainer != null)
                     mainFoldout.Add(componentInfoContainer);
             }
