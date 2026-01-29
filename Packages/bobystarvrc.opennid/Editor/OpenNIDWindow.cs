@@ -9,7 +9,6 @@ using UnityEngine;
 using UnityEngine.UIElements;
 using VRC.SDKBase;
 using VRC.SDKBase.Network;
-using Debug = UnityEngine.Debug;
 
 namespace OpenNID
 {
@@ -23,9 +22,13 @@ namespace OpenNID
         private Dictionary<OpenNIDNetworkIDPairElement.Status, Foldout> sortedStatusFoldouts;
         private VisualElement networkIDCountContainer;
         private Button autoResolveButton;
+        private ToolbarSearchField searchField;
+        private string filterTerm;
         
         public enum SortMethod { Status, NetworkID, File, }
         internal SortMethod sortMode; // TODO: Hook into EditorPrefs Manager
+
+        private const float LONG_REFRESH_THRESHOLD = 0.25f;
         
         [MenuItem("Tools/Open NID")]
         public static void OpenToolWindow()
@@ -34,6 +37,49 @@ namespace OpenNID
             currentWindow.titleContent = new GUIContent("Open NID Tool");
             currentWindow.minSize = new Vector2(284, 128);
             currentWindow.Focus();
+        }
+
+        [MenuItem("GameObject/Show Network ID", false)]
+        public static void PresentSelectedNetworkObject()
+        {
+            ExpandAndShowNetworkObjects(new List<GameObject> { Selection.activeGameObject });
+        }
+        
+        [MenuItem("GameObject/Show Network IDs", false)]
+        public static void PresentSelectedNetworkObjects()
+        {
+            ExpandAndShowNetworkObjects(Selection.gameObjects.ToList());
+        }
+        
+        [MenuItem("GameObject/Show Network ID", true)]
+        public static bool PresentSelectedNetworkObjectValidation()
+        {
+            return Selection.GetFiltered<VRCNetworkBehaviour>(SelectionMode.Editable).Length == 1;
+        }
+        
+        [MenuItem("GameObject/Show Network IDs", true)]
+        public static bool PresentSelectedNetworkObjectsValidation()
+        {
+            return Selection.GetFiltered<VRCNetworkBehaviour>(SelectionMode.Editable).Length > 1;
+        }
+
+        public static void ExpandAndShowNetworkObjects(List<GameObject> networkObjects)
+        {
+            OpenToolWindow();
+
+            if (!currentWindow)
+            {
+                OpenNIDUtility.LogError("Failed to find Open NID Window!");
+                return;
+            }
+            
+            currentWindow.PresentNetworkPairElementsFromObjects(networkObjects);
+        }
+
+        public static void SetAndShowSearchFilter(string filterTerm)
+        {
+            OpenToolWindow();
+            currentWindow.searchField.value = filterTerm;
         }
         
         private void OnEnable()
@@ -60,7 +106,7 @@ namespace OpenNID
         private void OnFocus()
         {
             // UX adjustment if list is long or slower hardware. Switches refresh only upon user intention if last was slow.
-            if (lastRefreshDuration < .25f)
+            if (!WasLastReloadLong())
                 Refresh();
         }
 
@@ -118,18 +164,23 @@ namespace OpenNID
             // View Options
             Button refreshButton = new Button(Refresh) { text = "Refresh" };
             root.Add(refreshButton);
+            
             DropdownField sortDropdown = new DropdownField("Sort By:", Enum.GetNames(typeof(SortMethod)).ToList(), (int)sortMode);
             Label sortDropdownLabel = sortDropdown.Q<Label>();
             if (sortDropdownLabel != null)
                 sortDropdownLabel.style.minWidth = 60;
             sortDropdown.RegisterValueChangedCallback(OnSortModeOptionChanged);
             root.Add(sortDropdown);
-
+            
+            searchField = new ToolbarSearchField() { name = "Search", style = { width = StyleKeyword.Auto, maxHeight = 22 }};
+            searchField.RegisterValueChangedCallback(OnSearchTermChanged);
+            root.Add(searchField);
+            
             // Auto Resolve Conflicts
             autoResolveButton = new Button(() => OpenNIDManager.TryAutoResolveConflicts()) { text = "Auto Resolve Conflicts" };
             root.Add(autoResolveButton);
         }
-
+        
         public bool TryImportNetworkIDs()
         {
             string path = EditorUtility.OpenFilePanelWithFilters("Open NID - Import Network IDs", Application.dataPath, new string[] { "txt", "json" });
@@ -239,6 +290,41 @@ namespace OpenNID
             Refresh();
         }
         
+        private void OnSearchTermChanged(ChangeEvent<string> evt)
+        {
+            filterTerm = evt.newValue;
+            if (!WasLastReloadLong())
+                Refresh();
+        }
+
+        internal void PresentNetworkPairElementsFromObjects(List<GameObject> presentingNetworkObjects)
+        {
+            if (networkIDPairElements == null || networkIDPairElements.Count == 0)
+                Refresh();
+            
+            List<OpenNIDNetworkIDPairElement> presentingElements = new List<OpenNIDNetworkIDPairElement>();
+            foreach (OpenNIDNetworkIDPairElement pairElement in networkIDPairElements.Where(pairElement => pairElement.networkIDPair != null))
+                presentingElements.AddRange(from networkObject in presentingNetworkObjects where networkObject == pairElement.networkIDPair.gameObject select pairElement);
+
+            foreach (OpenNIDNetworkIDPairElement presentingElement in presentingElements)
+            {
+                presentingElement.isExpanded = true;
+                if (sortMode == SortMethod.Status)
+                {
+                    if (sortedStatusFoldouts.ContainsKey(presentingElement.GetPrimaryStatus()))
+                        sortedStatusFoldouts[presentingElement.GetPrimaryStatus()].value = true;
+                }
+            }
+
+            if (presentingElements.Count == 0)
+                return;
+
+            if (searchField != null)
+                searchField.value = "";
+            networkIDCollectionScrollView.MarkDirtyRepaint();
+            networkIDCollectionScrollView.schedule.Execute(() => networkIDCollectionScrollView.ScrollTo(presentingElements[0]));
+        }
+        
         internal void Refresh()
         {
             Stopwatch refreshWatch = Stopwatch.StartNew();
@@ -251,20 +337,37 @@ namespace OpenNID
             {
                 SortNetworkObjectElements(sortMode);
                 List<NetworkIDPair> networkIDCollection = OpenNIDManager.targetSceneDescriptor.NetworkIDCollection;
+
+                // Remove Null/Missing Pairs
+                for (int i = 0; i < networkIDPairElements.Count; i++)
+                {
+                    if (networkIDPairElements[i].networkIDPair != null && networkIDCollection.Contains(networkIDPairElements[i].networkIDPair))
+                        continue;
+                    
+                    networkIDPairElements[i].RemoveFromHierarchy();
+                    networkIDPairElements.RemoveAt(i);
+                    i--;
+                }
                 
                 if (networkIDCollection.Count > networkIDPairElements.Count)
                 {
                     List<NetworkIDPair> remainingNetworkIDPairs = networkIDCollection.GetRange(networkIDPairElements.Count, networkIDCollection.Count - networkIDPairElements.Count);
                     GUIDrawNetworkObjectElements(networkIDCollectionScrollView, remainingNetworkIDPairs);
                 }
-                
+
                 for (int i = 0; i < networkIDPairElements.Count; i++)
                 {
+                    if (IsPairElementRemovedByFilter(networkIDPairElements[i], filterTerm))
+                    {
+                        networkIDPairElements[i].style.display = DisplayStyle.None;
+                        continue;
+                    }
+
+                    networkIDPairElements[i].style.display = DisplayStyle.Flex;
+                    
                     if (i < networkIDCollection.Count)
                     {
                         networkIDPairElements[i].style.display = DisplayStyle.Flex;
-                        if (networkIDPairElements[i].networkIDPair == null || !networkIDCollection.Contains(networkIDPairElements[i].networkIDPair))
-                            networkIDPairElements[i].networkIDPair = networkIDCollection[i];
                         networkIDPairElements[i].Refresh();
 
                         if (sortMode == SortMethod.Status && sortedStatusFoldouts.ContainsKey(networkIDPairElements[i].GetPrimaryStatus()))
@@ -429,6 +532,28 @@ namespace OpenNID
             OpenNIDNetworkIDPairElement networkIDPairElement = new OpenNIDNetworkIDPairElement(pair);
             root.Add(networkIDPairElement);
             networkIDPairElements.Add(networkIDPairElement);
+        }
+
+        private bool WasLastReloadLong()
+        {
+            return lastRefreshDuration >= LONG_REFRESH_THRESHOLD;
+        }
+
+        private bool IsPairElementRemovedByFilter(OpenNIDNetworkIDPairElement networkIDPairElement, string filter)
+        {
+            if (string.IsNullOrEmpty(filter))
+                return false;
+
+            if (networkIDPairElement?.networkIDPair == null)
+                return true;
+
+            if (networkIDPairElement.networkIDPair.ID.ToString().Contains(filter))
+                return false;
+
+            if (networkIDPairElement.networkIDPair.gameObject && networkIDPairElement.networkIDPair.gameObject.name.Contains(filter, StringComparison.InvariantCultureIgnoreCase))
+                return false;
+            
+            return true;
         }
     }    
 }
