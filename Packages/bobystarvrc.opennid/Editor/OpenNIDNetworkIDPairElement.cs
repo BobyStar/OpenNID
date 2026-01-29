@@ -12,9 +12,23 @@ namespace OpenNID
     public class OpenNIDNetworkIDPairElement : Box
     {
         [Flags]
-        public enum Status { Normal, NetworkIDPairMissing, NetworkObjectMissing, SerializedTypeNamesMissing = 4, ComponentMismatch = 8, PersistenceEnabled = 16, }
+        public enum Status
+        {
+            Normal = 0,
+            NetworkIDPairMissing = 1 << 0,
+            NetworkObjectMissing = 1 << 1,
+            SerializedTypeNamesMissing = 1 << 2,
+            ComponentMismatch = 1 << 3,
+            PersistenceEnabled = 1 << 4,
+            PinnedIdMismatch = 1 << 5,
+        }
+
         public Status statusFlags { get; private set; }
-        public bool HasIssue => HasStatus(Status.NetworkIDPairMissing) || HasStatus(Status.NetworkObjectMissing) || HasStatus(Status.SerializedTypeNamesMissing) || HasStatus(Status.ComponentMismatch);
+        public bool HasIssue => HasStatus(Status.NetworkIDPairMissing) || 
+                                HasStatus(Status.NetworkObjectMissing) || 
+                                HasStatus(Status.SerializedTypeNamesMissing) || 
+                                HasStatus(Status.ComponentMismatch) || 
+                                HasStatus(Status.PinnedIdMismatch);
 
         internal NetworkIDPair networkIDPair;
 
@@ -64,6 +78,8 @@ namespace OpenNID
                 return Status.NetworkIDPairMissing;
             if (HasStatus(Status.NetworkObjectMissing))
                 return Status.NetworkObjectMissing;
+            if (HasStatus(Status.PinnedIdMismatch))
+                return Status.PinnedIdMismatch;
             if (HasStatus(Status.SerializedTypeNamesMissing))
                 return Status.SerializedTypeNamesMissing;
             if (HasStatus(Status.ComponentMismatch))
@@ -132,7 +148,7 @@ namespace OpenNID
                 }
                 return;
             }
-            
+
             if (networkIDPair == null)
                 statusFlags = Status.NetworkIDPairMissing;
             else
@@ -143,6 +159,8 @@ namespace OpenNID
                     statusFlags |= Status.SerializedTypeNamesMissing;
                 if (OpenNIDManager.HasComponentMismatchWithFile(networkIDPair))
                     statusFlags |= Status.ComponentMismatch;
+                if (OpenNIDManager.HasPinnedNetworkIdMismatch(networkIDPair))
+                    statusFlags |= Status.PinnedIdMismatch;
 
                 // Non-Error
                 if (OpenNIDManager.IsNetworkIDPairPersistenceEnabled(networkIDPair))
@@ -319,7 +337,43 @@ namespace OpenNID
                     if (!HasIssue && componentNames == "No Components Found!")
                         componentInfoContainer.Add(new Button(() => OpenNIDManager.TryRemoveFileNetworkIDPair(networkIDPair)) { text = "Remove Network ID Pair" });
                 }
-                
+
+                if (HasStatus(Status.PinnedIdMismatch))
+                {
+                    if (componentInfoContainer == null)
+                    {
+                        componentInfoContainer = new VisualElement();
+                    }
+
+                    PinNetworkId pinNetworkId = networkIDPair.gameObject.GetComponent<PinNetworkId>();
+                    if (pinNetworkId != null)
+                    {
+                        Button autoFixButton = new Button(() =>
+                        {
+                            if (!EditorUtility.DisplayDialog(
+                                    "Confirm Network ID Change",
+                                    $"Are you sure you want to set the Actual Network ID to {pinNetworkId.PinnedNetworkId}?\n\n" +
+                                    "If this world has already been uploaded, this object will lose persistent data unless its Actual Network ID is the same as in the uploaded version.\n\n" +
+                                    "If you already pinned the Network ID, you should apply the Pinned Network ID.",
+                                    $"Apply Pinned Network ID ({pinNetworkId.PinnedNetworkId})",
+                                    "Cancel"
+                                ))
+                            {
+                                return;
+                            }
+
+                            OpenNIDManager.RemoveFileNetworkIDPair(networkIDPair);
+                            OpenNIDManager.AssignSceneNetworkObjectsNewNetworkIDs(currentNetworkBehaviours, OpenNIDWindow.currentWindow);
+                            OpenNIDManager.AssignSceneComponentsToFileComponentsOnObject(networkIDPair.gameObject);
+                        })
+                        {
+                            text = $"Apply Pinned Network ID ({pinNetworkId.PinnedNetworkId})",
+                            style = { marginTop = 8, }
+                        };
+                        componentInfoContainer.Add(autoFixButton);
+                    }
+                }
+
                 if (componentInfoContainer != null)
                     mainFoldout.Add(componentInfoContainer);
             }
