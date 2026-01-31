@@ -113,6 +113,20 @@ namespace OpenNID
                 {
                     EditNetworkIDWizard.Create(networkIDPair.gameObject.name, networkIDPair.ID, (newId) =>
                     {
+                        if (newId == networkIDPair.ID)
+                        {
+                            // nothing to do, early return
+                            return;
+                        }
+
+                        GameObject existing = OpenNIDManager.GetGameObjectFromNetworkID(newId);
+                        if (existing != null)
+                        {
+                            EditorUtility.DisplayDialog("Network ID In Use", 
+                                $"Can not assign Network ID {newId}. It is already in use by {existing.name}.", "OK");
+                            return;
+                        }
+    
                         OpenNIDManager.RemoveFileNetworkIDPair(networkIDPair);
                         networkIDPair.ID = newId;
                         OpenNIDManager.ImportNetworkIDsToScene(new () { networkIDPair });
