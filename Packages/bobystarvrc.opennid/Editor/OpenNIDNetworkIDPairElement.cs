@@ -396,6 +396,32 @@ namespace OpenNID
                             {
                                 return;
                             }
+                            
+                            GameObject existingObject = OpenNIDManager.GetGameObjectFromNetworkID(pinNetworkId.PinnedNetworkId);
+                            if (existingObject != null && existingObject != pinNetworkId.gameObject)
+                            {
+                                if (!EditorUtility.DisplayDialog(
+                                        "Network ID Conflict",
+                                        $"Another GameObject already has Network ID {pinNetworkId.PinnedNetworkId}: {existingObject.name}.\n\n" +
+                                        $"You can either attempt to auto-fix, which will assign a new Network ID to {existingObject.name} and apply " + 
+                                        $"the pinned ID {pinNetworkId.PinnedNetworkId} to {networkIDPair.gameObject.name}, " +
+                                        $"or you can cancel and edit the IDs manually.",
+                                        $"Attempt Auto-Fix",
+                                        "Cancel"
+                                    ))
+                                {
+                                    return;
+                                }
+                                int nextId = OpenNIDManager.GetNextAvailableNetworkID();
+                                OpenNIDManager.RemoveFileNetworkIDPair(OpenNIDManager.GetNetworkIDPairFromGameObjectInFile(existingObject));
+                                NetworkIDPair newPair = new NetworkIDPair()
+                                {
+                                    ID = nextId,
+                                    gameObject = existingObject,
+                                };
+                                OpenNIDManager.ImportNetworkIDsToScene(new() { newPair });
+                                OpenNIDManager.AssignSceneComponentsToFileComponentsOnObject(existingObject);
+                            }
 
                             OpenNIDManager.RemoveFileNetworkIDPair(networkIDPair);
                             OpenNIDManager.AssignSceneNetworkObjectsNewNetworkIDs(currentNetworkBehaviours, OpenNIDWindow.currentWindow);
