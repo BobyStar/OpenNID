@@ -1,16 +1,13 @@
 {
-    "name": "bobystarvrc.opennid.Editor",
+    "name": "bobystarvrc.opennid.Runtime",
     "rootNamespace": "",
     "references": [
         "VRC.SDK3",
         "VRC.SDK3.Editor",
         "VRC.SDKBase",
-        "VRC.SDKBase.Editor",
-        "bobystarvrc.opennid.Runtime"
+        "VRC.SDKBase.Editor"
     ],
-    "includePlatforms": [
-        "Editor"
-    ],
+    "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,

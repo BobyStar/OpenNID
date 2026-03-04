@@ -322,9 +322,11 @@ namespace OpenNID
             if (searchField != null)
                 searchField.value = "";
             networkIDCollectionScrollView.MarkDirtyRepaint();
-            networkIDCollectionScrollView.schedule.Execute(() => networkIDCollectionScrollView.ScrollTo(presentingElements[0]));
+            networkIDCollectionScrollView.schedule.Execute(() => {
+                networkIDCollectionScrollView.ScrollTo(presentingElements[0]);
+            }).StartingIn(50);
         }
-        
+
         internal void Refresh()
         {
             Stopwatch refreshWatch = Stopwatch.StartNew();
@@ -348,11 +350,15 @@ namespace OpenNID
                     networkIDPairElements.RemoveAt(i);
                     i--;
                 }
-                
+
                 if (networkIDCollection.Count > networkIDPairElements.Count)
                 {
                     List<NetworkIDPair> remainingNetworkIDPairs = networkIDCollection.GetRange(networkIDPairElements.Count, networkIDCollection.Count - networkIDPairElements.Count);
-                    GUIDrawNetworkObjectElements(networkIDCollectionScrollView, remainingNetworkIDPairs);
+                    // Manually draw to maintain ScrollView integrity
+                    foreach (NetworkIDPair pair in remainingNetworkIDPairs)
+                    {
+                        GUIDrawNetworkObjectElement(networkIDCollectionScrollView, pair);
+                    }
                 }
 
                 for (int i = 0; i < networkIDPairElements.Count; i++)
@@ -456,6 +462,7 @@ namespace OpenNID
                     { OpenNIDNetworkIDPairElement.Status.NetworkObjectMissing, new Foldout() { text = "<b>Missing Object!</b>", value = false } },
                     { OpenNIDNetworkIDPairElement.Status.ComponentMismatch, new Foldout() { text = "<b>Component Mismatch!</b>", value = false } },
                     { OpenNIDNetworkIDPairElement.Status.PersistenceEnabled, new Foldout() { text = "Persistence Enabled", value = false } },
+                    { OpenNIDNetworkIDPairElement.Status.PinnedIdMismatch, new Foldout() { text = "<b>Pinned Network ID Mismatch!</b>", value = false } },
                 };
                 sortedStatusFoldouts.Add(OpenNIDNetworkIDPairElement.Status.SerializedTypeNamesMissing, sortedStatusFoldouts[OpenNIDNetworkIDPairElement.Status.ComponentMismatch]);
                 
@@ -463,6 +470,7 @@ namespace OpenNID
                 networkIDCollectionScrollView.Add(sortedStatusFoldouts[OpenNIDNetworkIDPairElement.Status.NetworkObjectMissing]);
                 networkIDCollectionScrollView.Add(sortedStatusFoldouts[OpenNIDNetworkIDPairElement.Status.ComponentMismatch]);
                 networkIDCollectionScrollView.Add(sortedStatusFoldouts[OpenNIDNetworkIDPairElement.Status.PersistenceEnabled]);
+                networkIDCollectionScrollView.Add(sortedStatusFoldouts[OpenNIDNetworkIDPairElement.Status.PinnedIdMismatch]);
                 networkIDCollectionScrollView.Add(sortedStatusFoldouts[OpenNIDNetworkIDPairElement.Status.Normal]);
             }
 
